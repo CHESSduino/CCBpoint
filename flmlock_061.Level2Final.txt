@@ -1,0 +1,595 @@
+/*
+测试全部逻辑和游戏顺序：
+
+1，1-9初始化。
+
+2，LEVEL1任意数独3x3规则
+
+3，检测9-1特殊指令序列
+
+4，询问LEVEL2初始条件2个数字（系统随机）
+
+5，完成剩余7个数字的填充。
+
+6，完成LEVEL2，循环出题。每次随机数不同，位置不同，可以达到出题要求。
+
+——
+
+数独密码锁逻辑完成。
+
+——
+
+下步，加蓝牙模块和microduino替换。
+
+——
+
+再下步，完成游戏外观设备手工，比如加入语音提示，显示屏提示，结合特定游戏场景设计艺术装饰。最早前《植物大战僵尸2发布会》就用过机械的数独密码锁。就工装部分，还需要开关舵机的配合。工作才刚刚开始
+*/
+
+// 源编码
+// FlameLock Logic
+
+char s3x3LockTab[12][10] = 
+{
+  "231312123",
+  "321213132",
+  "132213321",
+  "123312231",
+
+  "312123231",
+  "132321213",
+  "213321132",
+  "231123312",
+
+  "123231312",
+  "213132321",
+  "321132213",
+  "312231123",
+};
+
+char cCurLock[10] = "         ";
+void setCurLock( int p, int c )
+{
+  if ( p>=1 && p<=9 )
+  {
+    if ( c == 0 ) 
+      cCurLock[p-1] = '-';  // view clear.
+    else
+    if ( c>=1 && c<=9 )
+      cCurLock[p-1] = '0' + (c+2)/3;
+  }
+}
+int is3x3UnLock( void )
+{
+  for ( int i=0; i<12; i++ )
+    if ( strcmp( s3x3LockTab[i], cCurLock ) == 0 ) return 1;
+  return 0;
+}
+void show3x3UnLock( void )
+{
+  int i, j;
+   for ( i=0; i<3; i++ )
+    {
+      for ( j=0; j<3; j++ )
+        Serial.print( cCurLock[i*3+j] );
+      Serial.println( "" );
+    }
+ }
+void checkLockLoop( int p, int c )
+{
+  int i, j;
+  setCurLock( p, c );
+  // print the cur lock.
+  Serial.println( cCurLock );
+  if ( is3x3UnLock() )
+    show3x3UnLock();
+}
+
+#define STEP_INIT 0    // starting the flame locker
+#define STEP_RAND 1    // after inited, do the level 1 game.
+#define STEP_9TO1 2    // 987654321 is the command to start the level 2
+#define STEP_ASK 3    // ask the question, 2 point with diffrent number.
+#define STEP_ANS 4    // answer loop for the other key in.
+int iSTEP = STEP_INIT;
+
+char cCurMask[2][2]  
+= { 0,0,0,0 };  // the mask is the STEP_ASK 2 point with diffrent number.
+void iniCurMask( void )
+{
+  cCurMask[0][0] = 0;
+  cCurMask[0][1] = 0;
+  cCurMask[1][0] = 0;
+  cCurMask[1][1] = 0;
+}
+int randMask( int i )
+{
+  int c = rand()/(RAND_MAX/3);
+  c += 1;
+  if ( i == 0 ) return c;
+  if ( i != c ) return c;
+  c += 2;
+  c -= 3*(c/3);
+  if ( c == 0 ) c = 3;
+  return c;
+}
+int setCurMask( int p )
+{
+  if ( cCurMask[0][0] == 0 )
+  {  cCurMask[0][0] = p;  cCurMask[0][1] = randMask(0); }
+  else
+  if ( cCurMask[1][0] == 0 )
+  {  cCurMask[1][0] = p;  cCurMask[1][1] = randMask(cCurMask[0][1]); }
+  else
+    return 1;
+  return 0;
+}
+void printMask( void )
+{
+  for ( int i=0; i<2; i++ )
+  {
+  Serial.print( "p" );
+  Serial.print( (char)(cCurMask[i][0]+'0') );
+  Serial.print( "=" );
+  Serial.print( (char)(cCurMask[i][1]+'0') );
+  Serial.println( ";" );
+  }
+}
+int isMasked( void )
+{
+  return ( cCurMask[0][0] >= 1 && cCurMask[0][0] <= 9 &&
+           cCurMask[1][0] >= 1 && cCurMask[1][0] <= 9 &&
+           cCurMask[0][1] >= 1 && cCurMask[0][1] <= 3 &&
+           cCurMask[1][1] >= 1 && cCurMask[1][1] <= 3 );
+}
+void checkLockMaskLoop(  int p, int c )
+{
+  int i, j;
+  setCurLock( p, c );
+  // replace the mask bits
+  i = cCurMask[0][0] - 1;
+  j = cCurMask[0][1];
+//  Serial.print( i );
+//  Serial.print( "," );
+//  Serial.println( j );
+  cCurLock[ (char)i ] = (char)j + '0';
+//  for ( i=0; i<9; i++ )
+//  {  Serial.print( (int)cCurLock[i] ); Serial.print( "," ); }
+//  Serial.println( "" );
+  i = cCurMask[1][0] - 1;
+  j = cCurMask[1][1];
+//  Serial.print( i );
+//  Serial.print( "," );
+//  Serial.println( j );
+  cCurLock[ (char)i ] = (char)j + '0';
+  // print the cur lock.
+//  for ( i=0; i<9; i++ )
+//  {  Serial.print( (int)cCurLock[i] ); Serial.print( "," ); }
+//  Serial.println( "" );
+  Serial.println( cCurLock );
+  if ( is3x3UnLock() )
+    show3x3UnLock();
+}
+
+char cCurCmd[10] = "         ";
+void setCurCmd( int p, int c )
+{
+  if ( p>=1 && p<=9 )
+  {
+    if ( c == 0 ) 
+      cCurCmd[p-1] = ' ';
+    else
+    if ( c>=1 && c<=9 )
+      cCurCmd[p-1] = '0' + c;
+  }
+}
+int isCurCmd9to1( void )
+{
+  return strcmp( cCurCmd, "987654321" ) == 0;
+}
+
+/*
+  Source for cloud chess board version ccb_020.1.chessidlong.txt
+  Starting form reading the module info correctly.
+*/
+
+// disable the printTmpcodes(); 6 36 0 5A 88 D4      6 54 0 90 136 212
+
+long lCodeTab[9];
+void initCodeTab( void )
+{
+  for ( int i=0; i<9; i++ )
+    lCodeTab[i] = -9;
+}
+void setCodeTab( int i, long c )
+{
+  if ( c >= 0 )
+  if ( i>0 && i<=9 )
+    lCodeTab[i-1] = c;
+}
+int isCodeTabInit( void )
+{
+  for ( int i=0; i<9; i++ )
+    if ( lCodeTab[i] <= 0 ) return 0;
+  return 1;
+}
+int isCodeTabInitPercent( void )
+{
+  int i, per=0;
+  for ( i=0; i<9; i++ )
+    if ( lCodeTab[i] > 0 ) per ++;
+  return per;
+}
+int idxOfCode( long c )
+{
+  if ( c == 0 ) return 0;
+  for ( int i=0; i<9; i++ )
+    if ( lCodeTab[i] == c ) return i+1;
+  return -1;
+}
+void printCodeIdx( long c )
+{
+  int i = idxOfCode( c );
+  if ( i <= 0 ) return;
+  Serial.print( "printCodeIdx: " );
+  Serial.print( c );
+  Serial.print( " = " );
+  Serial.println( i );
+}
+void printCodeIdxPos( int p, long c )
+{
+  int i = idxOfCode( c );
+  if ( c == 0 )
+  {
+    Serial.print( "(p" );
+    Serial.print( p );
+    Serial.println( " = 0);" );
+  } 
+  if ( i <= 0 ) return;
+  if ( p>0 && p<=9 )
+  { /*
+    Serial.print( "printCodeIdxPos: " );
+    Serial.print( c );
+    Serial.print( " = " );
+    Serial.print( i );
+    Serial.print( ";      " );*/
+    Serial.print( "(" );
+    Serial.print( p );
+    Serial.print( " = " );
+    Serial.print( i );
+    Serial.println( ");" );
+  }
+}
+
+/*
+  Character analysis operators 
+ 
+ Examples using the character analysis operators.
+ Send any byte and the sketch will tell you about it.
+ 
+ created 29 Nov 2010
+ modified 2 Apr 2012
+ by Tom Igoe
+ 
+ This example code is in the public domain.
+ */
+long lTimer = 0;
+unsigned char tmpcodes[10];
+int tmpcodesptr=0;
+
+void printCmd( int pos, int code, long id ) {
+  Serial.print( "printCmd(p,c,id);   " );
+  Serial.print( pos );
+  Serial.print( ", " );
+  Serial.print( code );
+  Serial.print( ", (" );
+  Serial.print( id, HEX );
+  Serial.print( ")" );
+  Serial.println( id );
+}
+
+void command( int pos, int code, long id ) {
+  // printCmd( pos, code, id );
+  int c;
+  // code 2 idx init.
+  switch ( iSTEP )
+  {
+    case STEP_INIT:
+  if ( !isCodeTabInit() )
+  {
+    setCodeTab( pos, id );
+    code = isCodeTabInitPercent();
+    Serial.print( "!(" );
+    Serial.print( code );
+    Serial.print( "/9)p" );
+    Serial.println( pos );
+  } else
+  {  // printCodeIdx( id );
+    printCodeIdxPos( pos, id );
+    c = idxOfCode( id );
+    checkLockLoop( pos, c );
+    setCurCmd( pos, c );
+    iSTEP = STEP_RAND;
+  }
+    break;
+    case STEP_RAND:
+    printCodeIdxPos( pos, id );
+    c = idxOfCode( id );
+    checkLockLoop( pos, c );
+    setCurCmd( pos, c );
+    Serial.println( cCurCmd );
+    if ( isCurCmd9to1() )
+      iSTEP = STEP_9TO1;
+    break;
+    case STEP_9TO1:
+    setCurLock( pos, idxOfCode( id ) );
+    Serial.println( "Please select 2 position using any keyID,\n It'll give you 2 number question." );
+    iniCurMask();
+    iSTEP = STEP_ASK;
+    break;
+    case STEP_ASK:
+    setCurLock( pos, idxOfCode( id ) );
+    if ( id > 0 )
+    {
+      Serial.print( "P=" );
+      Serial.println( pos );
+      setCurMask( pos );
+      printMask();
+    }
+    if ( isMasked() )
+      iSTEP = STEP_ANS;
+    break;
+    case STEP_ANS:
+    setCurLock( pos, idxOfCode( id ) );
+    c = idxOfCode( id );
+    // printMask();
+    // Serial.println( c );
+    checkLockMaskLoop( pos, c );
+    if ( is3x3UnLock() )
+      iSTEP = STEP_9TO1;  // LOOP THE level2.
+    break;
+  }
+}
+
+void TmpCodes2cmd() {
+  unsigned char b[4];
+  b[0] = tmpcodes[2+3];
+  b[1] = tmpcodes[2+2];
+  b[2] = tmpcodes[2+1];
+  b[3] = tmpcodes[2];
+  long l = *(long*)(b);
+  command( tmpcodes[0], tmpcodes[1], l );
+}
+
+void printTmpCodes() {
+  if ( tmpcodesptr > 0 )
+  for ( int i=0; i<tmpcodesptr; i++ )
+  {
+    Serial.write( ' ' ); 
+    Serial.print(tmpcodes[i]);
+  }
+}
+
+void printTmpCodesHex() {
+  if ( tmpcodesptr > 0 )
+  for ( int i=0; i<tmpcodesptr; i++ )
+  {
+    Serial.write( ' ' ); 
+    Serial.print(tmpcodes[i],HEX);
+  }
+}
+
+void setup() {
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Leonardo only
+  }
+  lTimer = 0;
+  tmpcodesptr = 0;
+  
+  // self init...
+  initCodeTab();
+  
+  // send an intro:
+  Serial.println("send any byte and I'll tell you everything I can about it");
+  Serial.println();
+}
+
+void loop() {
+  // get any incoming bytes:
+  if (Serial.available() > 0) {
+    int thisChar = Serial.read();
+    
+    // recording the codes.
+    if ( tmpcodesptr < 10 )
+    {
+      tmpcodes[tmpcodesptr] = thisChar;
+      tmpcodesptr += 1;
+    }
+    // reset timer.
+    lTimer = 0;
+  }
+  if ( lTimer > 2000 && tmpcodesptr > 0 )
+  { /* print the buffer.
+    Serial.print( "printTmpcodes();   " );
+    printTmpCodesHex();
+    Serial.print( "        " );
+    printTmpCodes();
+    Serial.println(""); */
+    // code 2 command.
+    TmpCodes2cmd();
+    tmpcodesptr = 0;
+  }
+  // timer conut.
+  lTimer += 1;
+}
+// 调试信息
+send any byte and I'll tell you everything I can about it
+
+!(1/9)p6
+!(2/9)p1
+!(3/9)p8
+!(4/9)p2
+!(5/9)p4
+!(6/9)p9
+!(7/9)p3
+!(8/9)p7
+!(9/9)p5
+(p1 = 0);
+-        
+(p2 = 0);
+--       
+         
+(p3 = 0);
+---      
+         
+(p5 = 0);
+--- -    
+         
+(p6 = 0);
+--- --   
+         
+(p9 = 0);
+--- --  -
+         
+(p8 = 0);
+--- -- --
+         
+(p7 = 0);
+--- -----
+         
+(p4 = 0);
+---------
+         
+(1 = 8);
+3--------
+8        
+(5 = 7);
+3---3----
+8   7    
+(2 = 4);
+32--3----
+84  7    
+(9 = 9);
+32--3---3
+84  7   9
+(6 = 6);
+32--32--3
+84  76  9
+(7 = 5);
+32--322-3
+84  765 9
+(4 = 3);
+32-1322-3
+84 3765 9
+(8 = 2);
+32-132213
+84 376529
+(3 = 1);
+321132213
+321
+132
+213
+841376529
+(p1 = 0);
+-21132213
+ 41376529
+(p2 = 0);
+--1132213
+  1376529
+(p3 = 0);
+---132213
+   376529
+(p6 = 0);
+---13-213
+   37 529
+(p5 = 0);
+---1--213
+   3  529
+(p4 = 0);
+------213
+      529
+(p7 = 0);
+-------13
+       29
+(p8 = 0);
+--------3
+        9
+(p9 = 0);
+---------
+         
+(1 = 9);
+3--------
+9        
+(8 = 2);
+3------1-
+9      2 
+(5 = 5);
+3---2--1-
+9   5  2 
+(3 = 7);
+3-3-2--1-
+9 7 5  2 
+(7 = 3);
+3-3-2-11-
+9 7 5 32 
+(2 = 6);
+323-2-11-
+967 5 32 
+(p2 = 0);
+3-3-2-11-
+9 7 5 32 
+(4 = 6);
+3-322-11-
+9 765 32 
+(9 = 1);
+3-322-111
+9 765 321
+(6 = 4);
+3-3222111
+9 7654321
+(2 = 8);
+333222111
+987654321
+Please select 2 position using any keyID,
+ It'll give you 2 number question.
+P=3
+p3=2;
+p0=0;
+P=4
+p3=2;
+p4=1;
+--21-----
+--21-----
+--21-----
+-121-----
+-121----1
+-1212---1
+-1212-2-1
+-121232-1
+-12123231
+312123231
+312
+123
+231
+Please select 2 position using any keyID,
+ It'll give you 2 number question.
+P=5
+p5=2;
+p0=0;
+P=9
+p5=2;
+p9=1;
+----2---1
+----2---1
+----2---1
+--2-2---1
+--2-23--1
+--2-23-31
+--2-23231
+--2123231
+3-2123231
+312123231
+312
+123
+231
