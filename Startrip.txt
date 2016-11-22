@@ -1,0 +1,70 @@
+This file to introduce the CCBrobot project.
+===========================
+
+What's CCBpoint?
+re: CCB means Cloud Chess Board.
+    using point method to recognize the chess board coordinates.
+    This is a game for kids never know the chess board
+    how to Coordinate representation.
+
+What's chess board coordinates?
+re: X from a-h(left to right), 
+    Y from 1-8(bottom to top),
+    above from white player, 
+    there're two side of chess game, 
+    each side play 1 step, white first.
+    (see below)
+
+a8,b8,c8,d8,e8,f8,g8,h8
+a7,b7,c7,d7,e7,f7,g7,h7
+a6,b6,c6,d6,e6,f6,g6,h6
+a5,b5,c5,d5,e5,f5,g5,h5
+a4,b4,c4,d4,e4,f4,g4,h4
+a3,b3,c3,d3,e3,f3,g3,h3
+a2,b2,c2,d2,e2,f2,g2,h2
+a1,b1,c1,d1,e1,f1,g1,h1
+
+What's the Game? 
+re: this game was based on Arduino device(toy) witch RFID module
+    which can read sensor(id chip) on each block of chess board.
+    means each block above a1-h8, will have one sensor id can be read.
+    When the play using the toy point, to put the RFID module read coil
+    on the block sensor(id chip), a sound of the block name be pronounced,
+    like a1, c4, g5, h8 ...
+
+Why's called HAPPY NEW YEAR?
+re: The principle of the game is each letter and number have a wave file
+    recorded before and save in arduino device, when point block, the name
+    of block will using 2 wave files to play, 1st letter, 2nd number.
+    This game, I replace 4 wave files A.wav 1.wav b.wav 2.wav to chinese
+    happy new year sentence, Xin.wav Nian.wav Kuai.wav Le.wav.
+    It's like a puzzle. after initialization, parents can give the kids
+    several chance to try to finding the rules of the board. let the kids
+    got the rules, X = a-h, Y = 1-8. You can rerecording the all voice by yourself.
+
+Have a fun day!
+
+PS: any question pls email me, 
+    yuandj1972@163.com
+
+Dejun Yuan
+the founder of 
+Flamechess Studio
+2016/11/22
+
+File list:
+====================================
+_00_RFID_IIC\ dir: RFID module files, provided by microduino
+                   must put into Microduino-IDE\hardware\Microduino\avr\libraries
+NewYear mp3 Release\ dir: all wave files for each letter and number
+                          see defines in source "CCBrobot.ino" or "ccbaudio.ino"
+ccbaudio\ dir: "audio.h" & "ccbaudio.ino" 
+               testing loop to pronounce letters and numbers wave.
+CCBrobot.ino: the game source, see comments of it.
+audio.h: the header file used by sound module from examples.
+
+history source file:
+---------------------
+CCBrobot v0.10 readids.txt: success readin any idchip in memory as HEX code.
+CCBrobot v0.11 ruleok.nosound.txt: using Serial.print to console for testing game rules.
+CCBrobot v0.12 ruleok.soundok.txt: same as "CCBrobot.ino", backup the source, adding the sounds.
